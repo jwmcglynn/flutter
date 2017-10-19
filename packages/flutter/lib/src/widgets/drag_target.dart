@@ -97,6 +97,7 @@ class Draggable<T> extends StatefulWidget {
     this.feedbackOffset: Offset.zero,
     this.dragAnchor: DragAnchor.child,
     this.affinity,
+    this.constraint,
     this.maxSimultaneousDrags,
     this.onDragStarted,
     this.onDraggableCanceled,
@@ -167,6 +168,8 @@ class Draggable<T> extends StatefulWidget {
   /// widget, will out-compete the [Scrollable] for vertical gestures.
   final Axis affinity;
 
+  final Axis constraint;
+
   /// How many simultaneous drags to support.
   ///
   /// When null, no limit is applied. Set this to 1 if you want to only allow
@@ -233,6 +236,7 @@ class LongPressDraggable<T> extends Draggable<T> {
     Widget childWhenDragging,
     Offset feedbackOffset: Offset.zero,
     DragAnchor dragAnchor: DragAnchor.child,
+    Axis constraint,
     int maxSimultaneousDrags,
     VoidCallback onDragStarted,
     DraggableCanceledCallback onDraggableCanceled,
@@ -245,6 +249,7 @@ class LongPressDraggable<T> extends Draggable<T> {
     childWhenDragging: childWhenDragging,
     feedbackOffset: feedbackOffset,
     dragAnchor: dragAnchor,
+    constraint: constraint,
     maxSimultaneousDrags: maxSimultaneousDrags,
     onDragStarted: onDragStarted,
     onDraggableCanceled: onDraggableCanceled,
@@ -323,6 +328,7 @@ class _DraggableState<T> extends State<Draggable<T>> {
       initialPosition: position,
       dragStartPoint: dragStartPoint,
       feedback: widget.feedback,
+      constraint: widget.constraint,
       feedbackOffset: widget.feedbackOffset,
       onDragEnd: (Velocity velocity, Offset offset, bool wasAccepted) {
         if (mounted) {
@@ -476,6 +482,7 @@ class _DragAvatar<T> extends Drag {
     this.dragStartPoint: Offset.zero,
     this.feedback,
     this.feedbackOffset: Offset.zero,
+    this.constraint,
     this.onDragEnd
   }) : assert(overlayState != null),
        assert(dragStartPoint != null),
@@ -490,6 +497,7 @@ class _DragAvatar<T> extends Drag {
   final Offset dragStartPoint;
   final Widget feedback;
   final Offset feedbackOffset;
+  final Axis constraint;
   final _OnDragEnd onDragEnd;
   final OverlayState overlayState;
 
@@ -501,7 +509,14 @@ class _DragAvatar<T> extends Drag {
 
   @override
   void update(DragUpdateDetails details) {
-    _position += details.delta;
+    if (constraint == null) {
+      _position += details.delta;
+    } else if (constraint == Axis.horizontal) {
+      _position += new Offset(details.delta.dx, 0.0);
+    } else if (constraint == Axis.vertical) {
+      _position += new Offset(0.0, details.delta.dy);
+    }
+
     updateDrag(_position);
   }
 
