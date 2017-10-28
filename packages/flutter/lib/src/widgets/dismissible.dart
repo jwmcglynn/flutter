@@ -24,6 +24,10 @@ const double _kDismissThreshold = 0.4;
 /// Used by [Dismissible.onDismissed].
 typedef void DismissDirectionCallback(DismissDirection direction);
 
+/// Signature used by [Dismissable] to determine if the resize animation
+/// should play.
+typedef bool ShouldResizeCallback(DismissDirection direction);
+
 /// The direction in which a [Dismissible] can be dismissed.
 enum DismissDirection {
   /// The [Dismissible] can be dismissed by dragging either up or down.
@@ -58,6 +62,10 @@ enum DismissDirection {
 /// is specified it is stacked behind the Dismissible's child and is exposed when
 /// the child moves.
 ///
+/// The widget calls the [onShouldResize] callback immediately after the slide
+/// animation to determine if the resize animation should play (if
+/// [resizeDuration] is non-null).
+///
 /// The widget calls the [onDismissed] callback either after its size has
 /// collapsed to zero (if [resizeDuration] is non-null) or immediately after
 /// the slide animation (if [resizeDuration] is null). If the Dismissible is a
@@ -78,6 +86,7 @@ class Dismissible extends StatefulWidget {
     this.background,
     this.secondaryBackground,
     this.onResize,
+    this.onShouldResize,
     this.onDismissed,
     this.direction: DismissDirection.horizontal,
     this.resizeDuration: const Duration(milliseconds: 300),
@@ -105,6 +114,9 @@ class Dismissible extends StatefulWidget {
 
   /// Called when the widget changes size (i.e., when contracting before being dismissed).
   final VoidCallback onResize;
+
+  /// Called when the widget slide animation is complete, to determine if the widget should change resize.
+  final ShouldResizeCallback onShouldResize;
 
   /// Called when the widget has been dismissed, after finishing resizing.
   final DismissDirectionCallback onDismissed;
@@ -413,13 +425,15 @@ class _DismissibleState extends State<Dismissible> with TickerProviderStateMixin
     assert(_moveController.isCompleted);
     assert(_resizeController == null);
     assert(_sizePriorToCollapse == null);
-    if (widget.resizeDuration == null) {
-      if (widget.onDismissed != null) {
-        final DismissDirection direction = _dismissDirection;
-        assert(direction != null);
-        widget.onDismissed(direction);
-      }
-    } else {
+
+    final DismissDirection direction = _dismissDirection;
+    assert(direction != null);
+
+    bool shouldResize = (widget.resizeDuration != null);
+    if (shouldResize && widget.onShouldResize != null)
+      shouldResize = widget.onShouldResize(_dismissDirection);
+
+    if (shouldResize) {
       _resizeController = new AnimationController(duration: widget.resizeDuration, vsync: this)
         ..addListener(_handleResizeProgressChanged)
         ..addStatusListener((AnimationStatus status) => updateKeepAlive());
@@ -434,6 +448,9 @@ class _DismissibleState extends State<Dismissible> with TickerProviderStateMixin
           curve: _kResizeTimeCurve
         ));
       });
+    } else {
+      if (widget.onDismissed != null)
+        widget.onDismissed(_dismissDirection);
     }
   }
 
