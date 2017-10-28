@@ -15,7 +15,7 @@ List<int> dismissedItems = <int>[];
 Widget background;
 const double crossAxisEndOffset = 0.5;
 
-Widget buildTest({ double startToEndThreshold, TextDirection textDirection: TextDirection.ltr }) {
+Widget buildTest({ double startToEndThreshold, ShouldResizeCallback onShouldResize, TextDirection textDirection: TextDirection.ltr }) {
   return new Directionality(
     textDirection: textDirection,
     child: new StatefulBuilder(
@@ -31,6 +31,7 @@ Widget buildTest({ double startToEndThreshold, TextDirection textDirection: Text
                 dismissedItems.add(item);
               });
             },
+            onShouldResize: onShouldResize,
             onResize: () {
               expect(dismissedItems.contains(item), isFalse);
             },
@@ -656,5 +657,55 @@ void main() {
     await checkFlingItemAfterMovement(tester, 1, gestureDirection: AxisDirection.right, mechanism: rollbackElement);
     expect(find.text('1'), findsOneWidget);
     expect(dismissedItems, isEmpty);
+  });
+
+  testWidgets('Dismissible onShouldResize callback determines if the widget resizes', (WidgetTester tester) async {
+    scrollDirection = Axis.vertical;
+    dismissDirection = DismissDirection.horizontal;
+    // TODO: Investigate why adding a background breaks dismissing.
+    //background = const Text('background');
+
+    DismissDirection shouldResizeDirection = null;
+    bool shouldResizeResult = true;
+    ShouldResizeCallback onShouldResize = (DismissDirection direction) {
+      shouldResizeDirection = direction;
+      return shouldResizeResult;
+    };
+
+    await tester.pumpWidget(buildTest(onShouldResize: onShouldResize));
+    expect(dismissedItems, isEmpty);
+
+    await dismissElement(tester, find.text('0'), gestureDirection: DismissDirection.startToEnd);
+    await tester.pump(); // start the slide
+    expect(shouldResizeDirection, isNull);
+    await tester.pump(const Duration(seconds: 1)); // finish the slide
+
+    expect(dismissedItems, isEmpty);
+    expect(find.text('0'), findsNothing);
+    expect(shouldResizeDirection, equals(DismissDirection.startToEnd));
+    //expect(find.text('background'), findsOneWidget);
+
+    await tester.pump(); // start the resize
+    await tester.pump(const Duration(seconds: 1)); // finish the resize
+
+    expect(dismissedItems, equals(<int>[0]));
+    expect(reportedDismissDirection, DismissDirection.startToEnd);
+    expect(find.text('0'), findsNothing);
+    //expect(find.text('background'), findsNothing);
+
+    // Reset and prepare to cancel the resize.
+    shouldResizeDirection = null;
+    shouldResizeResult = false;
+
+    await dismissElement(tester, find.text('1'), gestureDirection: DismissDirection.endToStart);
+    await tester.pump(); // start the slide
+    expect(shouldResizeDirection, isNull);
+    //expect(find.text('background'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1)); // finish the slide
+
+    expect(shouldResizeDirection, equals(DismissDirection.endToStart));
+    expect(dismissedItems, equals(<int>[0, 1]));
+    expect(find.text('1'), findsNothing);
+    //expect(find.text('background'), findsNothing);
   });
 }
