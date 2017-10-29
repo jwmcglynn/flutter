@@ -526,7 +526,7 @@ class _DismissibleState extends State<Dismissible> with TickerProviderStateMixin
       }
 
       children.add(content);
-      content = new Stack(children: children);
+      content = new Stack(children: children, fit: StackFit.passthrough);
     }
 
     // We are not resizing but we may be being dragging in widget.direction.

@@ -662,8 +662,7 @@ void main() {
   testWidgets('Dismissible onShouldResize callback determines if the widget resizes', (WidgetTester tester) async {
     scrollDirection = Axis.vertical;
     dismissDirection = DismissDirection.horizontal;
-    // TODO: Investigate why adding a background breaks dismissing.
-    //background = const Text('background');
+    background = const Text('background');
 
     DismissDirection shouldResizeDirection = null;
     bool shouldResizeResult = true;
@@ -683,7 +682,7 @@ void main() {
     expect(dismissedItems, isEmpty);
     expect(find.text('0'), findsNothing);
     expect(shouldResizeDirection, equals(DismissDirection.startToEnd));
-    //expect(find.text('background'), findsOneWidget);
+    expect(find.text('background'), findsOneWidget);
 
     await tester.pump(); // start the resize
     await tester.pump(const Duration(seconds: 1)); // finish the resize
@@ -691,7 +690,7 @@ void main() {
     expect(dismissedItems, equals(<int>[0]));
     expect(reportedDismissDirection, DismissDirection.startToEnd);
     expect(find.text('0'), findsNothing);
-    //expect(find.text('background'), findsNothing);
+    expect(find.text('background'), findsNothing);
 
     // Reset and prepare to cancel the resize.
     shouldResizeDirection = null;
@@ -700,12 +699,12 @@ void main() {
     await dismissElement(tester, find.text('1'), gestureDirection: DismissDirection.endToStart);
     await tester.pump(); // start the slide
     expect(shouldResizeDirection, isNull);
-    //expect(find.text('background'), findsOneWidget);
+    expect(find.text('background'), findsOneWidget);
     await tester.pump(const Duration(seconds: 1)); // finish the slide
 
     expect(shouldResizeDirection, equals(DismissDirection.endToStart));
     expect(dismissedItems, equals(<int>[0, 1]));
     expect(find.text('1'), findsNothing);
-    //expect(find.text('background'), findsNothing);
+    expect(find.text('background'), findsNothing);
   });
 }
