@@ -52,7 +52,6 @@ Widget buildTest({ double startToEndThreshold, ShouldResizeCallback onShouldResi
           padding: const EdgeInsets.all(10.0),
           child: new ListView(
             scrollDirection: scrollDirection,
-            itemExtent: itemExtent,
             children: <int>[0, 1, 2, 3, 4]
               .where((int i) => !dismissedItems.contains(i))
               .map(buildDismissibleItem).toList(),
@@ -657,6 +656,37 @@ void main() {
     await checkFlingItemAfterMovement(tester, 1, gestureDirection: AxisDirection.right, mechanism: rollbackElement);
     expect(find.text('1'), findsOneWidget);
     expect(dismissedItems, isEmpty);
+  });
+
+  testWidgets('Dismissible resize should move elements below it', (WidgetTester tester) async {
+    scrollDirection = Axis.vertical;
+    dismissDirection = DismissDirection.horizontal;
+    background = const Text('background');
+
+    await tester.pumpWidget(buildTest());
+    expect(dismissedItems, isEmpty);
+
+    await dismissElement(tester, find.text('0'), gestureDirection: DismissDirection.startToEnd);
+    await tester.pump(); // start the slide
+    await tester.pump(const Duration(seconds: 1)); // finish the slide
+
+    await tester.pump(); // start the resize
+
+    double itemHeight(String text) => tester.firstRenderObject(find.text(text)).size.height;
+    double itemTop(String text) => tester.getTopLeft(find.text(text)).dy;
+
+    expect(itemHeight('background'), equals(100.0));
+    expect(itemTop('1'), equals(110.0));
+
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(itemTop('1'), equals(110.0));
+    await tester.pump(const Duration(milliseconds: 90));
+    expect(itemTop('1'), lessThan(110.0));
+    expect(itemTop('1'), greaterThan(10.0));
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('background'), findsNothing);
+    expect(itemTop('1'), equals(10.0));
   });
 
   testWidgets('Dismissible onShouldResize callback determines if the widget resizes', (WidgetTester tester) async {
